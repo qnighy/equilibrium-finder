@@ -80,4 +80,33 @@ describe("findNashEquilibria", () => {
       ],
     ]);
   });
+  it("solves weighted rock-paper-scissors", () => {
+    const data: Record<string, number> = {
+      "rock-rock": 0,
+      "rock-paper": -6,
+      "rock-scissors": 3,
+      "paper-rock": 6,
+      "paper-paper": 0,
+      "paper-scissors": -6,
+      "scissors-rock": -3,
+      "scissors-paper": 6,
+      "scissors-scissors": 0,
+    };
+    const equilibria = findNashEquilibria(
+      [
+        ["rock", "paper", "scissors"],
+        ["rock", "paper", "scissors"],
+      ],
+      [
+        ({ strategies }) => data[strategies.join("-")],
+        ({ strategies }) => -data[strategies.join("-")],
+      ]
+    );
+    expect(equilibria).toEqual([
+      [
+        [0.4, 0.2, 0.39999999999999997],
+        [0.4, 0.2, 0.39999999999999997],
+      ],
+    ]);
+  });
 });
