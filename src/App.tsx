@@ -3,16 +3,26 @@ import './App.css';
 
 function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { numPlayers, playerNames } = state;
+  const { numPlayers, playerNames, allPlayerStrategies } = state;
   return (
     <div className="App">
       <h1>Nash equilibrium finder</h1>
       {
-        playerNames.map((playerName, playerId) => (
-          <div key={playerId}>
-            <h2>Player <input value={playerName} onChange={(e) => dispatch({ type: "setPlayerName", playerId, playerName: e.currentTarget.value })} /></h2>
-          </div>
-        ))
+        playerNames.map((playerName, playerId) => {
+          const strategies = allPlayerStrategies[playerId];
+          return (
+            <div key={playerId}>
+              <h2>Player <input value={playerName} onChange={(e) => dispatch({ type: "setPlayerName", playerId, playerName: e.currentTarget.value })} /></h2>
+              <ul>
+                {
+                  strategies.map((strategyName, strategyId) => (
+                    <li>Strategy {strategyId}: <input value={strategyName} onChange={(e) => dispatch({ type: "setStrategyName", playerId, strategyId, strategyName: e.currentTarget.value })} /></li>
+                  ))
+                }
+              </ul>
+            </div>
+          );
+        })
       }
       <button onClick={() => dispatch({ type: "addPlayer" })}>➕ Add a player</button>
       <button onClick={() => dispatch({ type: "removePlayer" })}>➖ Remove the last player</button>
@@ -35,7 +45,8 @@ const initialState: State = {
 type Action =
   | { type: "addPlayer" }
   | { type: "removePlayer" }
-  | { type: "setPlayerName", playerId: number, playerName: string };
+  | { type: "setPlayerName", playerId: number, playerName: string }
+  | { type: "setStrategyName", playerId: number, strategyId: number, strategyName: string };
 
 function reducer(prevState: State, action: Action): State {
   switch (action.type) {
@@ -62,6 +73,15 @@ function reducer(prevState: State, action: Action): State {
       return {
         ...prevState,
         playerNames,
+      };
+    }
+    case "setStrategyName": {
+      const allPlayerStrategies = [...prevState.allPlayerStrategies];
+      allPlayerStrategies[action.playerId] = allPlayerStrategies[action.playerId].concat();
+      allPlayerStrategies[action.playerId][action.strategyId] = action.strategyName;
+      return {
+        ...prevState,
+        allPlayerStrategies,
       };
     }
   }
