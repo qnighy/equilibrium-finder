@@ -2,9 +2,18 @@ import * as math from "mathjs";
 import { multidimensionalIndices } from "./indices";
 import { ConstExpr, Expr, LinearExpr, ProdExpr, VariableExpr } from "./poly";
 
+export type ProfitFunctionOptions = {
+  playerId: number;
+  strategy: string;
+  strategyId: number;
+  strategies: string[];
+  strategyIds: number[];
+};
+export type ProfitFunction = (options: ProfitFunctionOptions) => number;
+
 export function findNashEquilibria(
   allPlayerStrategies: string[][],
-  profitFunctions: ((strategy: string, strategies: string[]) => number)[]
+  profitFunctions: ProfitFunction[]
 ): number[][][] {
   const numPlayers = allPlayerStrategies.length;
   if (numPlayers !== profitFunctions.length) throw new Error("Lengths don't match");
@@ -24,9 +33,15 @@ export function findNashEquilibria(
   const pureProfileCache: number[][] = allPlayerStrategies.map(() => new Array(numPureProfiles).fill(0));
   for (const profile of profileIndices) {
     const pIndex = pureProfileIndex(profile);
-    const profileStrategies = profile.map((strategyId, j) => allPlayerStrategies[j][strategyId]);
+    const profileStrategies = profile.map((strategyId, playerId) => allPlayerStrategies[playerId][strategyId]);
     for (let playerId = 0; playerId < numPlayers; playerId++) {
-      pureProfileCache[playerId][pIndex] = profitFunctions[playerId](profileStrategies[playerId], profileStrategies);
+      pureProfileCache[playerId][pIndex] = profitFunctions[playerId]({
+        playerId,
+        strategy: profileStrategies[playerId],
+        strategyId: profile[playerId],
+        strategies: profileStrategies,
+        strategyIds: profile,
+      });
     }
   }
 

@@ -14,8 +14,8 @@ describe("findNashEquilibria", () => {
         ["a", "b"],
       ],
       [
-        (_strategy, [s1, s2]) => data[s1 + s2],
-        (_strategy, [s1, s2]) => -data[s1 + s2],
+        ({ strategies }) => data[strategies.join("")],
+        ({ strategies }) => -data[strategies.join("")],
       ]
     );
     expect(equilibria).toEqual([[[0.5, 0.5], [0.5, 0.5]]]);
@@ -33,8 +33,8 @@ describe("findNashEquilibria", () => {
         ["a", "b"],
       ],
       [
-        (_strategy, [s1, s2]) => data[s1 + s2],
-        (_strategy, [s1, s2]) => -data[s1 + s2],
+        ({ strategies }) => data[strategies.join("")],
+        ({ strategies }) => -data[strategies.join("")],
       ]
     );
     expect(equilibria).toEqual([[[0.75, 0.25], [0.75, 0.25]]]);
@@ -52,8 +52,8 @@ describe("findNashEquilibria", () => {
         ["a", "b"],
       ],
       [
-        (_strategy, [s1, s2]) => data[s1 + s2],
-        (_strategy, [s1, s2]) => data[s1 + s2],
+        ({ strategies }) => data[strategies.join("")],
+        ({ strategies }) => data[strategies.join("")],
       ]
     );
     expect(equilibria).toEqual([
@@ -62,20 +62,22 @@ describe("findNashEquilibria", () => {
       [[0.5, 0.5], [0.5, 0.5]],
     ]);
   });
-  xit("solves rock-paper-scissors", () => {
-    findNashEquilibria(
+  it("solves rock-paper-scissors", () => {
+    const equilibria = findNashEquilibria(
       [
         ["rock", "paper", "scissors"],
         ["rock", "paper", "scissors"],
       ],
       [
-        (_strategy, [s1, s2]) =>
-          s1 === "rock" && s2 === "scissors" || s1 === "scissors" && s2 === "paper" || s1 === "paper" && s2 === "rock" ? 1 :
-          s1 === s2 ? 0 : -1,
-        (_strategy, [s1, s2]) =>
-          s1 === "rock" && s2 === "scissors" || s1 === "scissors" && s2 === "paper" || s1 === "paper" && s2 === "rock" ? -1 :
-          s1 === s2 ? 0 : 1,
+        ({ strategyIds: [s1, s2] }) => (s1 + 4 - s2) % 3 - 1,
+        ({ strategyIds: [s1, s2] }) => (s2 + 4 - s1) % 3 - 1,
       ]
     );
+    expect(equilibria).toEqual([
+      [
+        [0.33333333333333337, 0.3333333333333333, 0.3333333333333333],
+        [0.33333333333333337, 0.3333333333333333, 0.3333333333333333],
+      ],
+    ]);
   });
 });
