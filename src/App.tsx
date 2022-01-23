@@ -40,11 +40,11 @@ type State = {
   allPlayerStrategies: string[][];
 };
 
-const initialState: State = {
+const initialState: State = normalizeState({
   numPlayers: 2,
   playerNames: ["0", "1"],
   allPlayerStrategies: [["rock", "paper", "scissors"], ["rock", "paper", "scissors"]],
-};
+});
 
 type Action =
   | { type: "addPlayer" }
@@ -57,58 +57,73 @@ type Action =
 function reducer(prevState: State, action: Action): State {
   switch (action.type) {
     case "addPlayer":
-      return {
+      return normalizeState({
         ...prevState,
         numPlayers: prevState.numPlayers + 1,
-        playerNames: [...prevState.playerNames, `${prevState.numPlayers}`],
-        allPlayerStrategies: [...prevState.allPlayerStrategies, ["rock", "paper", "scissors"]],
-      };
+      });
     case "removePlayer": {
-      const numPlayers = prevState.numPlayers - 1;
-      if (numPlayers <= 1) return prevState;
-      return {
+      return normalizeState({
         ...prevState,
-        numPlayers,
-        playerNames: prevState.playerNames.slice(0, numPlayers),
-        allPlayerStrategies: prevState.allPlayerStrategies.slice(0, numPlayers),
-      };
+        numPlayers: Math.max(prevState.numPlayers - 1, 2),
+      });
     }
     case "addStrategy": {
       const allPlayerStrategies = [...prevState.allPlayerStrategies];
       allPlayerStrategies[action.playerId] = [...allPlayerStrategies[action.playerId], `strategy ${allPlayerStrategies[action.playerId].length}`];
-      return {
+      return normalizeState({
         ...prevState,
         allPlayerStrategies,
-      };
+      });
     }
     case "removeStrategy": {
       const allPlayerStrategies = [...prevState.allPlayerStrategies];
       if (allPlayerStrategies[action.playerId].length <= 1) return prevState;
       allPlayerStrategies[action.playerId] = allPlayerStrategies[action.playerId].slice(0, allPlayerStrategies[action.playerId].length - 1);
-      return {
+      return normalizeState({
         ...prevState,
         allPlayerStrategies,
-      };
+      });
     }
     case "setPlayerName": {
       const playerNames = [...prevState.playerNames];
       playerNames[action.playerId] = action.playerName;
-      return {
+      return normalizeState({
         ...prevState,
         playerNames,
-      };
+      });
     }
     case "setStrategyName": {
       const allPlayerStrategies = [...prevState.allPlayerStrategies];
       allPlayerStrategies[action.playerId] = allPlayerStrategies[action.playerId].concat();
       allPlayerStrategies[action.playerId][action.strategyId] = action.strategyName;
-      return {
+      return normalizeState({
         ...prevState,
         allPlayerStrategies,
-      };
+      });
     }
   }
   return prevState;
+}
+
+function normalizeState(origState: State): State {
+  const numPlayers = Math.max(origState.numPlayers, 2);
+  const playerNames = resize(origState.playerNames, numPlayers, (index) => `${index}`);
+  const allPlayerStrategies = resize(origState.allPlayerStrategies, numPlayers, () => ["rock", "paper", "scissors"]);
+  return { numPlayers, playerNames, allPlayerStrategies };
+}
+
+function resize<T>(orig: T[], newSize: number, filler: (index: number) => T): T[] {
+  if (orig.length === newSize) {
+    return orig;
+  } else if (orig.length > newSize) {
+    return orig.slice(0, newSize);
+  } else {
+    const ret = [...orig];
+    while (ret.length < newSize) {
+      ret.push(filler(ret.length));
+    }
+    return ret;
+  }
 }
 
 export default App;
