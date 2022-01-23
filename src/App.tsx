@@ -1,6 +1,7 @@
-import React, { useReducer } from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 import './App.css';
 import { multidimensionalIndices } from './indices';
+import { findNashEquilibria } from './equilibrium';
 
 function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -9,6 +10,24 @@ function App() {
   dimensionWithoutTableAxes[tableAxis1] = 1;
   dimensionWithoutTableAxes[tableAxis2] = 1;
   const indicesWithoutTableAxes = Array.from(multidimensionalIndices(dimensionWithoutTableAxes));
+
+  const parsedPayoffMatrices = mapMD(payoffMatrices, (value) => Number(value));
+  const payoffValid = everyMD(parsedPayoffMatrices, (x) => !isNaN(x) && x !== Infinity && x !== -Infinity);
+  const serializedStrategies = JSON.stringify(allPlayerStrategies);
+  const serializedPayoffMatrices = payoffValid ? JSON.stringify(parsedPayoffMatrices) : "";
+  const [lastResult, setLastResult] = useState<[string, number[][][]]>(["", []]);
+  useEffect(() => {
+    if (serializedPayoffMatrices !== "") {
+      const allPlayerStrategies: string[][] = JSON.parse(serializedStrategies);
+      const parsedPayoffMatrices: MDArray<number>[] = JSON.parse(serializedPayoffMatrices);
+      const equilibria = findNashEquilibria(
+        allPlayerStrategies,
+        parsedPayoffMatrices.map((mat) => ({ strategyIds }) => getMD(mat, strategyIds ))
+      )
+      setLastResult([serializedPayoffMatrices, equilibria])
+    }
+  }, [serializedStrategies, serializedPayoffMatrices]);
+
   return (
     <div className="App">
       <h1>Nash equilibrium finder</h1>
@@ -111,6 +130,47 @@ function App() {
                           </tr>
                         ))
                       }
+                    </tbody>
+                  </table>
+                </div>
+              ))
+            }
+          </div>
+        ))
+      }
+      <h2>Equilibria found</h2>
+      {
+        serializedPayoffMatrices === "" ?
+          <p>Invalid constraints</p> :
+        serializedPayoffMatrices !== lastResult[0] ?
+          <p>Calculating...</p> :
+        lastResult[1].length === 0 ?
+          <p>No equilibrium found</p> :
+        lastResult[1].map((equilibrium, equilibriumIndex) => (
+          <div key={equilibriumIndex}>
+            <h3>Equilibrium {equilibriumIndex}</h3>
+            {
+              equilibrium.map((mixedStrategy, playerId) => (
+                <div key={playerId}>
+                  <p>Player {playerNames[playerId]}:</p>
+                  <table>
+                    <thead>
+                      <tr>
+                        {
+                          mixedStrategy.map((_value, strategyId) => (
+                            <th key={strategyId}>{allPlayerStrategies[playerId][strategyId]}</th>
+                          ))
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        {
+                          mixedStrategy.map((probability, strategyId) => (
+                            <td key={strategyId}>{probability}</td>
+                          ))
+                        }
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -294,6 +354,22 @@ function updateMD<T>(array: MDArray<T>, indices: number[], updater: (prev: T) =>
         return array;
       }
     }
+  }
+}
+
+function mapMD<T, U>(array: MDArray<T>, mapper: (value: T) => U): MDArray<U> {
+  if (Array.isArray(array)) {
+    return array.map((elem) => mapMD(elem, mapper));
+  } else {
+    return mapper(array);
+  }
+}
+
+function everyMD<T>(array: MDArray<T>, predicate: (value: T) => boolean): boolean {
+  if (Array.isArray(array)) {
+    return array.every((elem) => everyMD(elem, predicate));
+  } else {
+    return predicate(array);
   }
 }
 
