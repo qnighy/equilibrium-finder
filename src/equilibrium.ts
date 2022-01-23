@@ -2,21 +2,21 @@ import * as math from "mathjs";
 import { multidimensionalIndices } from "./indices";
 import { ConstExpr, Expr, LinearExpr, ProdExpr, VariableExpr } from "./poly";
 
-export type ProfitFunctionOptions = {
+export type PayoffFunctionOptions = {
   playerId: number;
   strategy: string;
   strategyId: number;
   strategies: string[];
   strategyIds: number[];
 };
-export type ProfitFunction = (options: ProfitFunctionOptions) => number;
+export type PayoffFunction = (options: PayoffFunctionOptions) => number;
 
 export function findNashEquilibria(
   allPlayerStrategies: string[][],
-  profitFunctions: ProfitFunction[]
+  payoffFunctions: PayoffFunction[]
 ): number[][][] {
   const numPlayers = allPlayerStrategies.length;
-  if (numPlayers !== profitFunctions.length) throw new Error("Lengths don't match");
+  if (numPlayers !== payoffFunctions.length) throw new Error("Lengths don't match");
 
   const dimensions = allPlayerStrategies.map((strategies) => strategies.length);
   const profileIndices = multidimensionalIndices(dimensions);
@@ -35,7 +35,7 @@ export function findNashEquilibria(
     const pIndex = pureProfileIndex(profile);
     const profileStrategies = profile.map((strategyId, playerId) => allPlayerStrategies[playerId][strategyId]);
     for (let playerId = 0; playerId < numPlayers; playerId++) {
-      pureProfileCache[playerId][pIndex] = profitFunctions[playerId]({
+      pureProfileCache[playerId][pIndex] = payoffFunctions[playerId]({
         playerId,
         strategy: profileStrategies[playerId],
         strategyId: profile[playerId],
@@ -118,8 +118,8 @@ export function findNashEquilibria(
     // From the assumption, we can do the following:
     // - Slightly decrease the probability of the base strategy, and increase that of a "picked" strategy.
     // - Slightly increase the probability of the base strategy, and decrease that of a "picked" strategy.
-    // From the local optimality of the equilibrium, both shouldn't improve the player's mean profit.
-    // So the partial differentiation of the profit at the point should be 0.
+    // From the local optimality of the equilibrium, both shouldn't improve the player's mean payoff.
+    // So the partial differentiation of the payoff at the point should be 0.
     const zeroConstraints = varIdToStrategy.map(([playerId, strategyId]) => {
       const baseStrategyId = baseStrategyIds[playerId];
       const terms: (readonly [Expr, number])[] = [];
@@ -136,8 +136,8 @@ export function findNashEquilibria(
     // Inequality constraints.
     // From the assumption, we can do the following:
     // - Slightly decrease the probability of the base strategy, and increase that of an "unpicked" strategy.
-    // From the local optimality of the equilibrium, it shouldn't improve the player's mean profit.
-    // So the partial differentiation of the profit at the point should be non-negative.
+    // From the local optimality of the equilibrium, it shouldn't improve the player's mean payoff.
+    // So the partial differentiation of the payoff at the point should be non-negative.
     // Additionally all the probabilities must be positive.
     const positiveConstraints: Expr[] = [];
     for (let playerId = 0; playerId < numPlayers; playerId++) {
