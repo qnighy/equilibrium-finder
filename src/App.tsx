@@ -97,7 +97,15 @@ function App() {
                                 const indices = [...strategyIds];
                                 indices[tableAxis1] = axis1StrategyId;
                                 indices[tableAxis2] = axis2StrategyId;
-                                return <td>{getMD(payoffMatrices[playerId], indices)}</td>;
+                                return (
+                                  <td>
+                                    <input
+                                      value={getMD(payoffMatrices[playerId], indices)}
+                                      onChange={(e) => dispatch({ type: "updatePayoff", playerId, indices, payoff: e.currentTarget.value })}
+                                      onBlur={(e) => dispatch({ type: "updatePayoff", playerId, indices, payoff: reparseNumber(e.currentTarget.value) })}
+                                    />
+                                  </td>
+                                );
                               })
                             }
                           </tr>
@@ -119,7 +127,7 @@ type State = {
   numPlayers: number;
   playerNames: string[];
   allPlayerStrategies: string[][];
-  payoffMatrices: MDArray<number>[];
+  payoffMatrices: MDArray<string>[];
   tableAxis1: number;
   tableAxis2: number;
 };
@@ -129,8 +137,8 @@ const initialState: State = normalizeState({
   playerNames: ["0", "1"],
   allPlayerStrategies: [["rock", "paper", "scissors"], ["rock", "paper", "scissors"]],
   payoffMatrices: [
-    [[0, -1, 1], [1, 0, -1], [-1, 1, 0]],
-    [[0, 1, -1], [-1, 0, 1], [1, -1, 0]],
+    [["0", "-1", "1"], ["1", "0", "-1"], ["-1", "1", "0"]],
+    [["0", "1", "-1"], ["-1", "0", "1"], ["1", "-1", "0"]],
   ],
   tableAxis1: 0,
   tableAxis2: 1,
@@ -143,6 +151,7 @@ type Action =
   | { type: "removeStrategy", playerId: number }
   | { type: "setPlayerName", playerId: number, playerName: string }
   | { type: "setStrategyName", playerId: number, strategyId: number, strategyName: string }
+  | { type: "updatePayoff", playerId: number, indices: number[], payoff: string }
   | { type: "selectTableAxis", axis: 1 | 2, playerId: number };
 
 function reducer(prevState: State, action: Action): State {
@@ -192,6 +201,14 @@ function reducer(prevState: State, action: Action): State {
         allPlayerStrategies,
       });
     }
+    case "updatePayoff": {
+      const payoffMatrices = [...prevState.payoffMatrices];
+      payoffMatrices[action.playerId] = updateMD(payoffMatrices[action.playerId], action.indices, () => action.payoff);
+      return normalizeState({
+        ...prevState,
+        payoffMatrices,
+      });
+    }
     case "selectTableAxis": {
       let { tableAxis1, tableAxis2 } = prevState;
       if (action.axis === 1) {
@@ -223,7 +240,7 @@ function normalizeState(origState: State): State {
   const allPlayerStrategies = resize(origState.allPlayerStrategies, numPlayers, () => ["strategy 0"]);
   const dimension = allPlayerStrategies.map((strategies) => strategies.length);
   const payoffMatrices = resize(origState.payoffMatrices, numPlayers, () => [])
-    .map((mat) => resizeMD(mat, dimension, () => 0));
+    .map((mat) => resizeMD(mat, dimension, () => "0"));
   const tableAxis1 = Math.min(origState.tableAxis1, numPlayers - 1);
   let tableAxis2 = Math.min(origState.tableAxis2, numPlayers - 1);
   if (tableAxis1 === tableAxis2) {
@@ -258,6 +275,28 @@ function getMD<T>(array: MDArray<T>, indices: number[]): T {
   return current;
 }
 
+function updateMD<T>(array: MDArray<T>, indices: number[], updater: (prev: T) => T): MDArray<T> {
+  return recurse(array, 0);
+
+  function recurse(array: MDArray<T>, i: number): MDArray<T> {
+    if (i >= indices.length) {
+      if (Array.isArray(array)) {
+        return array;
+      } else {
+        return updater(array);
+      }
+    } else {
+      if (Array.isArray(array)) {
+        const ret = [...array];
+        ret[indices[i]] = recurse(ret[indices[i]], i + 1);
+        return ret;
+      } else {
+        return array;
+      }
+    }
+  }
+}
+
 function resizeMD<T>(orig: MDArray<T>, newDimension: number[], filler: (indices: number[]) => T): MDArray<T> {
   return recurse([], orig);
 
@@ -281,6 +320,12 @@ function resizeMD<T>(orig: MDArray<T>, newDimension: number[], filler: (indices:
       }
     }
   }
+}
+
+function reparseNumber(s: string): string {
+  const n = Number(s);
+  if (isNaN(n)) return "0";
+  return n.toString();
 }
 
 export default App;
