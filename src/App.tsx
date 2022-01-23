@@ -30,7 +30,7 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Nash equilibrium finder</h1>
+      <h1>Nash equilibrium finder (buggy)</h1>
       {
         playerNames.map((playerName, playerId) => {
           const strategies = allPlayerStrategies[playerId];
