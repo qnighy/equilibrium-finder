@@ -40,7 +40,7 @@ function App() {
               <ul>
                 {
                   strategies.map((strategyName, strategyId) => (
-                    <li>Strategy {strategyId}: <input value={strategyName} onChange={(e) => dispatch({ type: "setStrategyName", playerId, strategyId, strategyName: e.currentTarget.value })} /></li>
+                    <li key={strategyId}>Strategy {strategyId}: <input value={strategyName} onChange={(e) => dispatch({ type: "setStrategyName", playerId, strategyId, strategyName: e.currentTarget.value })} /></li>
                   ))
                 }
                 <li>
@@ -61,7 +61,7 @@ function App() {
           {
             playerNames.map((playerName, playerId) => (
               <label key={playerId}>
-                <input type="radio" checked={tableAxis1 === playerId} onClick={() => dispatch({ type: "selectTableAxis", axis: 1, playerId })} />
+                <input type="radio" checked={tableAxis1 === playerId} onChange={() => dispatch({ type: "selectTableAxis", axis: 1, playerId })} />
                 Player {playerName}
               </label>
             ))
@@ -72,7 +72,7 @@ function App() {
           {
             playerNames.map((playerName, playerId) => (
               <label key={playerId}>
-                <input type="radio" checked={tableAxis2 === playerId} onClick={() => dispatch({ type: "selectTableAxis", axis: 2, playerId })} />
+                <input type="radio" checked={tableAxis2 === playerId} onChange={() => dispatch({ type: "selectTableAxis", axis: 2, playerId })} />
                 Player {playerName}
               </label>
             ))
@@ -100,8 +100,8 @@ function App() {
                       <tr>
                         <th>Player {playerNames[tableAxis1]} ＼ Player {playerNames[tableAxis2]}</th>
                         {
-                          allPlayerStrategies[tableAxis2].map((axis2StrategyName) => (
-                            <th>{axis2StrategyName}</th>
+                          allPlayerStrategies[tableAxis2].map((axis2StrategyName, axis2StrategyId) => (
+                            <th key={axis2StrategyId}>{axis2StrategyName}</th>
                           ))
                         }
                       </tr>
@@ -109,7 +109,7 @@ function App() {
                     <tbody>
                       {
                         allPlayerStrategies[tableAxis1].map((axis1StrategyName, axis1StrategyId) => (
-                          <tr>
+                          <tr key={axis1StrategyId}>
                             <th>{axis1StrategyName}</th>
                             {
                               allPlayerStrategies[tableAxis2].map((_axis2StrategyName, axis2StrategyId) => {
@@ -117,7 +117,7 @@ function App() {
                                 indices[tableAxis1] = axis1StrategyId;
                                 indices[tableAxis2] = axis2StrategyId;
                                 return (
-                                  <td>
+                                  <td key={axis2StrategyId}>
                                     <input
                                       value={getMD(payoffMatrices[playerId], indices)}
                                       onChange={(e) => dispatch({ type: "updatePayoff", playerId, indices, payoff: e.currentTarget.value })}
