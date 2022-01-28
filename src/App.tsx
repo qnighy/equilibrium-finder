@@ -2,7 +2,7 @@ import React, { useEffect, useReducer, useState } from 'react';
 import './App.css';
 import { multidimensionalIndices } from './indices';
 import { findNashEquilibria } from './equilibrium';
-import { MDArray as MDArray2, NestedArray } from "./md-array";
+import { MDArray, NestedArray } from "./md-array";
 
 function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -21,7 +21,7 @@ function App() {
     if (serializedPayoffMatrices !== "") {
       const allPlayerStrategies: string[][] = JSON.parse(serializedStrategies);
       const parsedPayoffMatrices: NestedArray<number>[] = JSON.parse(serializedPayoffMatrices);
-      const payoffMatrices = parsedPayoffMatrices.map((m) => MDArray2.fromNested<number>(m));
+      const payoffMatrices = parsedPayoffMatrices.map((m) => MDArray.fromNested<number>(m));
       const equilibria = findNashEquilibria(
         allPlayerStrategies,
         payoffMatrices.map((mat) => ({ strategyIds }) => mat.get(strategyIds))
@@ -189,7 +189,7 @@ type State = {
   numPlayers: number;
   playerNames: string[];
   allPlayerStrategies: string[][];
-  payoffMatrices: MDArray2<string>[];
+  payoffMatrices: MDArray<string>[];
   tableAxis1: number;
   tableAxis2: number;
 };
@@ -199,8 +199,8 @@ const initialState: State = normalizeState({
   playerNames: ["0", "1"],
   allPlayerStrategies: [["rock", "paper", "scissors"], ["rock", "paper", "scissors"]],
   payoffMatrices: [
-    MDArray2.fromNested([["0", "-1", "1"], ["1", "0", "-1"], ["-1", "1", "0"]]),
-    MDArray2.fromNested([["0", "1", "-1"], ["-1", "0", "1"], ["1", "-1", "0"]]),
+    MDArray.fromNested([["0", "-1", "1"], ["1", "0", "-1"], ["-1", "1", "0"]]),
+    MDArray.fromNested([["0", "1", "-1"], ["-1", "0", "1"], ["1", "-1", "0"]]),
   ],
   tableAxis1: 0,
   tableAxis2: 1,
@@ -302,7 +302,7 @@ function normalizeState(origState: State): State {
   const playerNames = resize(origState.playerNames, numPlayers, (index) => `${index}`);
   const allPlayerStrategies = resize(origState.allPlayerStrategies, numPlayers, () => ["strategy 0"]);
   const dimension = allPlayerStrategies.map((strategies) => strategies.length);
-  const payoffMatrices = resize(origState.payoffMatrices, numPlayers, () => new MDArray2([0], () => "0"))
+  const payoffMatrices = resize(origState.payoffMatrices, numPlayers, () => new MDArray([0], () => "0"))
     .map((mat) => resizeMD(mat, dimension, () => "0"));
   const tableAxis1 = Math.min(origState.tableAxis1, numPlayers - 1);
   let tableAxis2 = Math.min(origState.tableAxis2, numPlayers - 1);
@@ -326,8 +326,8 @@ function resize<T>(orig: T[], newSize: number, filler: (index: number) => T): T[
   }
 }
 
-function resizeMD<T>(orig: MDArray2<T>, newDimension: number[], filler: (indices: number[]) => T): MDArray2<T> {
-  return new MDArray2(newDimension, (indices) => {
+function resizeMD<T>(orig: MDArray<T>, newDimension: number[], filler: (indices: number[]) => T): MDArray<T> {
+  return new MDArray(newDimension, (indices) => {
     const projectedIndices = indices.slice(0, orig.shape.length);
     while (projectedIndices.length < orig.shape.length) projectedIndices.push(0);
     const withinRange = orig.shape.every((dim, i) => projectedIndices[i] < dim);
