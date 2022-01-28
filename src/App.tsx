@@ -14,21 +14,16 @@ function App() {
 
   const parsedPayoffMatrices = payoffMatrices.map((m) => m.mapSimple((value) => Number(value)));
   const payoffValid = parsedPayoffMatrices.every((m) => m.everySimple((x) => !isNaN(x) && x !== Infinity && x !== -Infinity));
-  const serializedStrategies = JSON.stringify(allPlayerStrategies);
   const serializedPayoffMatrices = payoffValid ? JSON.stringify(parsedPayoffMatrices.map((m) => m.toNested())) : "";
   const [lastResult, setLastResult] = useState<[string, number[][][]]>(["", []]);
   useEffect(() => {
     if (serializedPayoffMatrices !== "") {
-      const allPlayerStrategies: string[][] = JSON.parse(serializedStrategies);
       const parsedPayoffMatrices: NestedArray<number>[] = JSON.parse(serializedPayoffMatrices);
       const payoffMatrices = parsedPayoffMatrices.map((m) => MDArray.fromNested<number>(m));
-      const equilibria = findNashEquilibria(
-        allPlayerStrategies,
-        payoffMatrices.map((mat) => ({ strategyIds }) => mat.get(strategyIds))
-      )
+      const equilibria = findNashEquilibria(payoffMatrices);
       setLastResult([serializedPayoffMatrices, equilibria])
     }
-  }, [serializedStrategies, serializedPayoffMatrices]);
+  }, [serializedPayoffMatrices]);
 
   return (
     <div className="App">

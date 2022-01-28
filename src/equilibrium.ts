@@ -1,6 +1,7 @@
 import * as math from "mathjs";
 import { multidimensionalIndices } from "./indices";
 import { ConstExpr, Expr, LinearExpr, ProdExpr, VariableExpr } from "./poly";
+import { MDReadonlyArray } from "./md-array";
 
 export type PayoffFunctionOptions = {
   playerId: number;
@@ -12,40 +13,19 @@ export type PayoffFunctionOptions = {
 export type PayoffFunction = (options: PayoffFunctionOptions) => number;
 
 export function findNashEquilibria(
-  allPlayerStrategies: string[][],
-  payoffFunctions: PayoffFunction[]
+  payoffMatrices: MDReadonlyArray<number>[]
 ): number[][][] {
-  const numPlayers = allPlayerStrategies.length;
-  if (numPlayers !== payoffFunctions.length) throw new Error("Lengths don't match");
+  const numPlayers = payoffMatrices.length;
+  if (numPlayers === 0) throw new Error("At least one player is needed");
 
-  const dimensions = allPlayerStrategies.map((strategies) => strategies.length);
-  const profileIndices = multidimensionalIndices(dimensions);
-
-  const numPureProfiles = allPlayerStrategies.map((strategies) => strategies.length).reduce((a, b) => a * b, 1);
-  function pureProfileIndex(profile: readonly number[]): number {
-    let num = 0;
-    allPlayerStrategies.forEach((strategies, playerId) => {
-      num = num * strategies.length + profile[playerId];
-    });
-    return num;
+  const dimensions = payoffMatrices[0].shape;
+  if (dimensions.length !== numPlayers) throw new Error("Dimension mismatch");
+  for (const m of payoffMatrices) {
+    if (m.shape.length !== dimensions.length) throw new Error("Dimension mismatch");
+    if (!m.shape.every((x, i) => x === dimensions[i])) throw new Error("Dimension mismatch");
   }
 
-  const pureProfileCache: number[][] = allPlayerStrategies.map(() => new Array(numPureProfiles).fill(0));
-  for (const profile of profileIndices) {
-    const pIndex = pureProfileIndex(profile);
-    const profileStrategies = profile.map((strategyId, playerId) => allPlayerStrategies[playerId][strategyId]);
-    for (let playerId = 0; playerId < numPlayers; playerId++) {
-      pureProfileCache[playerId][pIndex] = payoffFunctions[playerId]({
-        playerId,
-        strategy: profileStrategies[playerId],
-        strategyId: profile[playerId],
-        strategies: profileStrategies,
-        strategyIds: profile,
-      });
-    }
-  }
-
-  const strategyBitflags = allPlayerStrategies.map(() => 0);
+  const strategyBitflags = dimensions.map(() => 0);
   const nashEquilibria: number[][][] = [];
   searchBitflags(0);
 
@@ -58,7 +38,7 @@ export function findNashEquilibria(
       return;
     }
     
-    const numStrategies = allPlayerStrategies[playerId].length;
+    const numStrategies = dimensions[playerId];
     // bitflags === 0 means no choice, skip this case
     for (let bitflags = 1; bitflags < (1 << numStrategies); bitflags++) {
       strategyBitflags[playerId] = bitflags;
@@ -72,13 +52,13 @@ export function findNashEquilibria(
   // - in the mixed strategy, all the "unpicked" pure strategy have zero probability.
   function searchMixed() {
     // For each player, pick the "base strategy". This is the lowest of all the possible strategies.
-    const baseStrategyIds: number[] = allPlayerStrategies.map(() => 0);
+    const baseStrategyIds: number[] = dimensions.map(() => 0);
     // For each "picked" strategy other than the base strategy,
     // assign a variable that represents the probability in the mixed strategy.
-    const strategyToVarId: (number | null)[][] = allPlayerStrategies.map((strategies) => strategies.map(() => null));
+    const strategyToVarId: (number | null)[][] = dimensions.map((numStrategies) => new Array(numStrategies).fill(null));
     const varIdToStrategy: [number, number][] = [];
     for (let playerId = 0; playerId < numPlayers; playerId++) {
-      const numStrategies = allPlayerStrategies[playerId].length;
+      const numStrategies = dimensions[playerId];
       let baseStrategyId: number | undefined = undefined;
       for (let strategyId = 0; strategyId < numStrategies; strategyId++) {
         const usesThisStrategy = (strategyBitflags[playerId] >> strategyId) & 1;
@@ -96,15 +76,15 @@ export function findNashEquilibria(
     // - For each player's base strategy, it is 1 - (x_i + x_j + ... + x_k)
     // - For a "picked" strategy other than the base strategy, it is x_i
     // - For an "unpicked" strategy, it is 0
-    const strategyToExpr: Expr[][] = allPlayerStrategies.map((strategies, playerId) =>
-      strategies.map((_s, strategyId) => {
+    const strategyToExpr: Expr[][] = dimensions.map((numStrategies, playerId) =>
+      new Array(numStrategies).fill(null).map((_s, strategyId) => {
         if (strategyId === baseStrategyIds[playerId]) {
           const vars: number[] = [];
-          strategies.forEach((_s, strategyId2) => {
+          for (let strategyId2 = 0; strategyId2 < numStrategies; strategyId2++) {
             if (strategyToVarId[playerId][strategyId2] !== null) {
               vars.push(strategyToVarId[playerId][strategyId2]!);
             }
-          });
+          }
           return new LinearExpr(vars.map<[Expr, number]>((v) => [new VariableExpr(v), -1]).concat([[new ConstExpr(1), 1]]));
         } else if (strategyToVarId[playerId][strategyId] !== null) {
           return new VariableExpr(strategyToVarId[playerId][strategyId]!);
@@ -125,9 +105,9 @@ export function findNashEquilibria(
       const terms: (readonly [Expr, number])[] = [];
       for (const profile of multidimensionalIndices(dimensions.map((d, i) => i === playerId ? 1 : d))) {
         profile[playerId] = baseStrategyId;
-        const baseStrategyFactor = pureProfileCache[playerId][pureProfileIndex(profile)];
+        const baseStrategyFactor = payoffMatrices[playerId].get(profile);
         profile[playerId] = strategyId;
-        const strategyFactor = pureProfileCache[playerId][pureProfileIndex(profile)];
+        const strategyFactor = payoffMatrices[playerId].get(profile);
         terms.push([new ProdExpr(profile.map((strategyId2, playerId2) => playerId2 === playerId ? new ConstExpr(1) : strategyToExpr[playerId2][strategyId2])), strategyFactor - baseStrategyFactor]);
       }
       return new LinearExpr(terms);
@@ -141,7 +121,7 @@ export function findNashEquilibria(
     // Additionally all the probabilities must be positive.
     const positiveConstraints: Expr[] = [];
     for (let playerId = 0; playerId < numPlayers; playerId++) {
-      const numStrategies = allPlayerStrategies[playerId].length;
+      const numStrategies = dimensions[playerId];
       const baseStrategyId = baseStrategyIds[playerId];
       for (let strategyId = 0; strategyId < numStrategies; strategyId++) {
         if ((strategyBitflags[playerId] >> strategyId) & 1) {
@@ -150,9 +130,9 @@ export function findNashEquilibria(
           const terms: (readonly [Expr, number])[] = [];
           for (const profile of multidimensionalIndices(dimensions.map((d, i) => i === playerId ? 1 : d))) {
             profile[playerId] = baseStrategyId;
-            const baseStrategyFactor = pureProfileCache[playerId][pureProfileIndex(profile)];
+            const baseStrategyFactor = payoffMatrices[playerId].get(profile);
             profile[playerId] = strategyId;
-            const strategyFactor = pureProfileCache[playerId][pureProfileIndex(profile)];
+            const strategyFactor = payoffMatrices[playerId].get(profile);
             terms.push([new ProdExpr(profile.map((strategyId2, playerId2) => playerId2 === playerId ? new ConstExpr(1) : strategyToExpr[playerId2][strategyId2])), baseStrategyFactor - strategyFactor]);
           }
           positiveConstraints.push(new LinearExpr(terms));
