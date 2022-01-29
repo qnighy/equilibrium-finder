@@ -2,6 +2,23 @@ import { findNashEquilibria } from "./equilibrium";
 import { MDArray } from "./md-array";
 
 describe("findNashEquilibria", () => {
+  it("solves degenerated game", () => {
+    const equilibria = findNashEquilibria(
+      [
+        MDArray.fromNested([
+          [0, 0],
+        ]),
+        MDArray.fromNested([
+          [0, 0],
+        ]),
+      ]
+    );
+    expect(equilibria).toEqual([
+      [[1], [1, 0]],
+      [[1], [0, 1]],
+      [[1], [1, 0]],
+    ]);
+  });
   it("solves simplest nontrivial equilibrium", () => {
     const equilibria = findNashEquilibria(
       [

@@ -177,7 +177,7 @@ export function findNashEquilibria(
     // Check if the current solution is actually feasible.
     const lastZValues = zeroConstraints.map((c) => c.call(currentMixedProfileVector));
     const lastPValues = positiveConstraints.map((c) => c.call(currentMixedProfileVector));
-    if (lastZValues.every((x) => Math.abs(x) < 0.00000000000001) && lastPValues.every((x) => x > 0)) {
+    if (lastZValues.every((x) => Math.abs(x) < 0.00000000000001) && lastPValues.every((x) => x >= 0)) {
       // console.log(currentMixedProfileVector);
       const nashEquilibrium = strategyToExpr.map((exprs) =>
         exprs.map((e) => e.call(currentMixedProfileVector))
