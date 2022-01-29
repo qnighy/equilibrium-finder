@@ -33,7 +33,7 @@ function App() {
           const strategies = allPlayerStrategies[playerId];
           return (
             <div key={playerId}>
-              <h2>Player <input value={playerName} onChange={(e) => dispatch({ type: "setPlayerName", playerId, playerName: e.currentTarget.value })} /></h2>
+              <h2>Player {playerId}: <input value={playerName} onChange={(e) => dispatch({ type: "setPlayerName", playerId, playerName: e.currentTarget.value })} /></h2>
               <ul>
                 {
                   strategies.map((strategyName, strategyId) => (
@@ -59,7 +59,7 @@ function App() {
             playerNames.map((playerName, playerId) => (
               <label key={playerId}>
                 <input type="radio" checked={tableAxis1 === playerId} onChange={() => dispatch({ type: "selectTableAxis", axis: 1, playerId })} />
-                Player {playerName}
+                {playerName}
               </label>
             ))
           }
@@ -70,7 +70,7 @@ function App() {
             playerNames.map((playerName, playerId) => (
               <label key={playerId}>
                 <input type="radio" checked={tableAxis2 === playerId} onChange={() => dispatch({ type: "selectTableAxis", axis: 2, playerId })} />
-                Player {playerName}
+                {playerName}
               </label>
             ))
           }
@@ -79,7 +79,7 @@ function App() {
       {
         playerNames.map((playerName, playerId) => (
           <div key={playerId}>
-            <h3>Payoff for Player {playerName}</h3>
+            <h3>Payoff for {playerName}</h3>
             {
               indicesWithoutTableAxes.map((strategyIds) => (
                 <div key={strategyIds.join(",")}>
@@ -88,14 +88,14 @@ function App() {
                       <h4>{
                         strategyIds.map((strategyId, playerId) =>
                           playerId === tableAxis1 || playerId === tableAxis2 ? null :
-                          `Player ${playerNames[playerId]} => ${allPlayerStrategies[playerId][strategyId]}`
+                          `${playerNames[playerId]} => ${allPlayerStrategies[playerId][strategyId]}`
                         ).filter((elem) => elem !== null).join(", ")
                       }</h4>
                   }
                   <table>
                     <thead>
                       <tr>
-                        <th>Player {playerNames[tableAxis1]} ＼ Player {playerNames[tableAxis2]}</th>
+                        <th>{playerNames[tableAxis1]} ＼ {playerNames[tableAxis2]}</th>
                         {
                           allPlayerStrategies[tableAxis2].map((axis2StrategyName, axis2StrategyId) => (
                             <th key={axis2StrategyId}>{axis2StrategyName}</th>
@@ -149,7 +149,7 @@ function App() {
             {
               equilibrium.map((mixedStrategy, playerId) => (
                 <div key={playerId}>
-                  <p>Player {playerNames[playerId]}:</p>
+                  <p>{playerNames[playerId]}:</p>
                   <table>
                     <thead>
                       <tr>
@@ -191,7 +191,7 @@ type State = {
 
 const initialState: State = normalizeState({
   numPlayers: 2,
-  playerNames: ["0", "1"],
+  playerNames: ["Alice", "Bob"],
   allPlayerStrategies: [["rock", "paper", "scissors"], ["rock", "paper", "scissors"]],
   payoffMatrices: [
     MDArray.fromNested([["0", "-1", "1"], ["1", "0", "-1"], ["-1", "1", "0"]]),
@@ -294,7 +294,7 @@ function reducer(prevState: State, action: Action): State {
 
 function normalizeState(origState: State): State {
   const numPlayers = Math.max(origState.numPlayers, 2);
-  const playerNames = resize(origState.playerNames, numPlayers, (index) => `${index}`);
+  const playerNames = resize(origState.playerNames, numPlayers, (index) => `Player ${index}`);
   const allPlayerStrategies = resize(origState.allPlayerStrategies, numPlayers, () => ["strategy 0"]);
   const dimension = allPlayerStrategies.map((strategies) => strategies.length);
   const payoffMatrices = resize(origState.payoffMatrices, numPlayers, () => new MDArray([0], () => "0"))
