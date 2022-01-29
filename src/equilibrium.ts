@@ -157,14 +157,14 @@ export function findNashEquilibria(
       // Inequality constraint, only add to the matrix when it is evaluated as negative.
       // Add a small perturbation to ensure the solution is pushed into the interior.
       // eslint-disable-next-line no-loop-func
-      const pValuesAndDiffs = positiveConstraints.map((c) => c.callDiff(currentMixedProfileVector)).map<[number, number[]]>(([x, v]) => [x - 0.0000001, v]).filter(([x]) => x < 0);
+      const pValuesAndDiffs = positiveConstraints.map((c) => c.callDiff(currentMixedProfileVector)).map<[number, number[]]>(([x, v]) => [x - 0.00000000000001, v]).filter(([x]) => x < 0);
       const valuesAndDiffs = zValuesAndDiffs.concat(pValuesAndDiffs);
 
       // Solve Ax=b. Due to the inequality constraints, _A_ may have more rows than the dimension of the solution space.
       // So using A^TAx=A^Tb (normal equation) instead (i.e. use least squares).
       const vecB = math.matrix(valuesAndDiffs.map(([x]) => x));
       // We're already at the feasible solution or almost there. Stop iteration.
-      if (!(math.norm(vecB) >= 0.00001)) break;
+      if (!(math.norm(vecB) >= 0.00000000000001)) break;
       const matA = math.matrix(valuesAndDiffs.map(([,v]) => v));
       const matAT = math.transpose(matA);
       const matATA = math.multiply(matAT, matA);
@@ -177,7 +177,8 @@ export function findNashEquilibria(
     // Check if the current solution is actually feasible.
     const lastZValues = zeroConstraints.map((c) => c.call(currentMixedProfileVector));
     const lastPValues = positiveConstraints.map((c) => c.call(currentMixedProfileVector));
-    if (lastZValues.every((x) => Math.abs(x) < 0.00000000000001) && lastPValues.every((x) => x >= 0)) {
+
+    if (lastZValues.every((x) => Math.abs(x) < 0.00000000000001) && lastPValues.every((x) => x > -0.00000000000001)) {
       // console.log(currentMixedProfileVector);
       const nashEquilibrium = strategyToExpr.map((exprs) =>
         exprs.map((e) => e.call(currentMixedProfileVector))
